@@ -7,6 +7,20 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;700&display=swap');
 
+    html {
+      font-size: 16px;
+    }
+
+    @media (max-width: 600px) {
+      html {
+        font-size: 20px;
+      }
+      #box {
+        width: 80px !important;
+        height: 80px !important;
+      }
+    }
+
     body {
       font-family: 'Rubik', sans-serif;
       text-align: center;
@@ -54,7 +68,7 @@
     button {
       margin: 10px;
       padding: 12px 28px;
-      font-size: 20px;
+      font-size: 1rem;
       background: #00c9a7;
       border: none;
       border-radius: 30px;
@@ -100,7 +114,7 @@
     #modeSelect {
       margin-top: 10px;
       padding: 12px 25px;
-      font-size: 18px;
+      font-size: 1rem;
       background: linear-gradient(135deg, #ffffff, #dfe6e9);
       color: #333;
       border: 2px solid #ccc;
@@ -127,195 +141,191 @@
   </style>
 </head>
 <body>
-  <div id="homeScreen">
-    <h1>🎯 Catch the Square!</h1>
-    <p>Click the square as many times as you can before time runs out!</p>
-    <label for="modeSelect">Choose Mode:</label>
-    <select id="modeSelect">
-      <option value="normal">Normal (30 sec)</option>
-      <option value="easy">Easy (45 sec)</option>
-      <option value="hard">Hard (20 sec)</option>
-      <option value="infinite">Infinite Mode</option>
-    </select>
-    <button id="startBtn">🚀 Start Game</button>
-    <p id="lastScore">Last Score: 0</p>
-    <p id="bestScore">Best Score: 0</p>
+<div id="homeScreen">
+  <h1>🎯 Catch the Square!</h1>
+  <p>Click the square as many times as you can before time runs out!</p>
+  <label for="modeSelect">Choose Mode:</label>
+  <select id="modeSelect">
+    <option value="normal">Normal (30 sec)</option>
+    <option value="easy">Easy (45 sec)</option>
+    <option value="hard">Hard (20 sec)</option>
+    <option value="infinite">Infinite Mode</option>
+  </select>
+  <button id="startBtn">🚀 Start Game</button>
+  <p id="lastScore">Last Score: 0</p>
+  <p id="bestScore">Best Score: 0</p>
+</div>
+
+<div id="gameUI">
+  <div id="score">Score: 0</div>
+  <div id="timer">Time: ∞</div>
+  <button id="pauseBtn">⏹ Exit</button>
+  <div id="gameArea">
+    <div id="box"></div>
   </div>
+</div>
 
-  <div id="gameUI">
-    <div id="score">Score: 0</div>
-    <div id="timer">Time: ∞</div>
-    <button id="pauseBtn">⏹ Exit</button>
-    <div id="gameArea">
-      <div id="box"></div>
-    </div>
-  </div>
+<div id="endScreen">
+  <h2>🏁 Game Over!</h2>
+  <p id="finalScore">Your Score: 0</p>
+  <p id="finalBest">Best Score: 0</p>
+  <button id="restartBtn">🔁 Play Again</button>
+  <button id="homeBtn">🏠 Home</button>
+</div>
 
-  <div id="endScreen">
-    <h2>🏁 Game Over!</h2>
-    <p id="finalScore">Your Score: 0</p>
-    <p id="finalBest">Best Score: 0</p>
-    <button id="restartBtn">🔁 Play Again</button>
-    <button id="homeBtn">🏠 Home</button>
-  </div>
+<audio id="clickSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_aefb06e689.mp3?filename=mouse-click-153941.mp3"></audio>
+<audio id="bgMusic" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_4a56cd02c5.mp3?filename=happy-beat-111909.mp3" loop></audio>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<script>
+  const box = document.getElementById("box");
+  const startBtn = document.getElementById("startBtn");
+  const restartBtn = document.getElementById("restartBtn");
+  const homeBtn = document.getElementById("homeBtn");
+  const pauseBtn = document.getElementById("pauseBtn");
+  const scoreText = document.getElementById("score");
+  const timerText = document.getElementById("timer");
+  const gameArea = document.getElementById("gameArea");
+  const homeScreen = document.getElementById("homeScreen");
+  const gameUI = document.getElementById("gameUI");
+  const endScreen = document.getElementById("endScreen");
+  const finalScore = document.getElementById("finalScore");
+  const finalBest = document.getElementById("finalBest");
+  const lastScore = document.getElementById("lastScore");
+  const bestScoreDisplay = document.getElementById("bestScore");
+  const clickSound = document.getElementById("clickSound");
+  const bgMusic = document.getElementById("bgMusic");
+  const modeSelect = document.getElementById("modeSelect");
 
-  <audio id="clickSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_aefb06e689.mp3?filename=mouse-click-153941.mp3"></audio>
-  <audio id="bgMusic" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_4a56cd02c5.mp3?filename=happy-beat-111909.mp3" loop></audio>
+  let score = 0;
+  let bestScore = localStorage.getItem("bestScore") || 0;
+  let lastScoreValue = localStorage.getItem("lastScore") || 0;
+  let timer;
+  let reactionTimeout;
+  let isInfinite = false;
 
-  <script>
-    const box = document.getElementById("box");
-    const startBtn = document.getElementById("startBtn");
-    const restartBtn = document.getElementById("restartBtn");
-    const homeBtn = document.getElementById("homeBtn");
-    const pauseBtn = document.getElementById("pauseBtn");
-    const scoreText = document.getElementById("score");
-    const timerText = document.getElementById("timer");
-    const gameArea = document.getElementById("gameArea");
-    const homeScreen = document.getElementById("homeScreen");
-    const gameUI = document.getElementById("gameUI");
-    const endScreen = document.getElementById("endScreen");
-    const finalScore = document.getElementById("finalScore");
-    const finalBest = document.getElementById("finalBest");
-    const lastScore = document.getElementById("lastScore");
-    const bestScoreDisplay = document.getElementById("bestScore");
-    const clickSound = document.getElementById("clickSound");
-    const bgMusic = document.getElementById("bgMusic");
-    const modeSelect = document.getElementById("modeSelect");
+  lastScore.textContent = "Last Score: " + lastScoreValue;
+  bestScoreDisplay.textContent = "Best Score: " + bestScore;
 
-    let score = 0;
-    let bestScore = localStorage.getItem("bestScore") || 0;
-    let lastScoreValue = localStorage.getItem("lastScore") || 0;
-    let timer;
-    let isInfinite = false;
+  function fireConfetti() {
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: ['#00c9a7', '#ff4d4d', '#ffd700', '#764ba2']
+    });
+  }
 
-    lastScore.textContent = "Last Score: " + lastScoreValue;
-    bestScoreDisplay.textContent = "Best Score: " + bestScore;
+  function randomPosition() {
+    const areaWidth = gameArea.clientWidth;
+    const areaHeight = gameArea.clientHeight;
+    const x = Math.random() * (areaWidth - 60);
+    const y = Math.random() * (areaHeight - 60);
+    box.style.left = x + "px";
+    box.style.top = y + "px";
 
-    function randomPosition() {
-      const areaWidth = gameArea.clientWidth;
-      const areaHeight = gameArea.clientHeight;
-      const x = Math.random() * (areaWidth - 60);
-      const y = Math.random() * (areaHeight - 60);
-      box.style.left = x + "px";
-      box.style.top = y + "px";
+    if (Math.random() < 0.2) {
+      box.classList.add("bonus");
+    } else {
+      box.classList.remove("bonus");
+    }
+  }
 
-      // 1 in 5 chance of bonus
-      if (Math.random() < 0.2) {
-        box.classList.add("bonus");
-      } else {
-        box.classList.remove("bonus");
-      }
+  function endGame() {
+    clearInterval(timer);
+    clearTimeout(reactionTimeout);
+    box.style.display = "none";
+    gameUI.style.display = "none";
+    endScreen.style.display = "flex";
+    finalScore.textContent = "Your Score: " + score;
+
+    if (score > bestScore) {
+      bestScore = score;
+      localStorage.setItem("bestScore", bestScore);
+      fireConfetti();
     }
 
-    function endGame() {
-      clearInterval(timer);
-      box.style.display = "none";
-      gameUI.style.display = "none";
-      endScreen.style.display = "flex";
-      finalScore.textContent = "Your Score: " + score;
+    finalBest.textContent = "Best Score: " + bestScore;
+    localStorage.setItem("lastScore", score);
+    bgMusic.pause();
+  }
 
-      if (score > bestScore) {
-        bestScore = score;
-        localStorage.setItem("bestScore", bestScore);
-      }
-      finalBest.textContent = "Best Score: " + bestScore;
-      localStorage.setItem("lastScore", score);
-      bgMusic.pause();
+  function startGame() {
+    score = 0;
+    let mode = modeSelect.value;
+    let timeLeft = 30;
+    isInfinite = false;
+
+    if (mode === "easy") timeLeft = 45;
+    else if (mode === "hard") timeLeft = 20;
+    else if (mode === "infinite") isInfinite = true;
+
+    scoreText.textContent = "Score: 0";
+    timerText.textContent = isInfinite ? "Time: ∞" : "Time: " + timeLeft;
+
+    homeScreen.style.display = "none";
+    endScreen.style.display = "none";
+    gameUI.style.display = "flex";
+    box.style.display = "block";
+    randomPosition();
+
+    bgMusic.currentTime = 0;
+    bgMusic.play();
+
+    clearInterval(timer);
+    clearTimeout(reactionTimeout);
+    if (!isInfinite) {
+      timer = setInterval(() => {
+        timeLeft--;
+        timerText.textContent = "Time: " + timeLeft;
+        if (timeLeft <= 0) endGame();
+      }, 1000);
     }
 
-    function startGame() {
-      score = 0;
-      let mode = modeSelect.value;
-      let timeLeft = 30;
-      isInfinite = false;
-
-      if (mode === "easy") timeLeft = 45;
-      else if (mode === "hard") timeLeft = 20;
-      else if (mode === "infinite") isInfinite = true;
-
-      scoreText.textContent = "Score: 0";
-      timerText.textContent = isInfinite ? "Time: ∞" : "Time: " + timeLeft;
-
-      homeScreen.style.display = "none";
-      endScreen.style.display = "none";
-      gameUI.style.display = "flex";
-      box.style.display = "block";
-      randomPosition();
-
-      bgMusic.currentTime = 0;
-      bgMusic.play();
-
-      clearInterval(timer);
-      if (!isInfinite) {
-        timer = setInterval(() => {
-          timeLeft--;
-          timerText.textContent = "Time: " + timeLeft;
-          if (timeLeft <= 0) endGame();
-        }, 1000);
-      }
-
-      box.onclick = () => {
-        if (box.classList.contains("bonus")) {
-          score += 5;
-          fireConfetti();
-        } else {
-          score++;
-        }
-        scoreText.textContent = "Score: " + score;
-        randomPosition();
-        clickSound.currentTime = 0;
-        clickSound.play();
-      };
-    }
-
-    startBtn.onclick = startGame;
-    restartBtn.onclick = startGame;
-    homeBtn.onclick = () => {
-      endScreen.style.display = "none";
-      homeScreen.style.display = "flex";
-      lastScoreValue = localStorage.getItem("lastScore") || 0;
-      lastScore.textContent = "Last Score: " + lastScoreValue;
-    };
-    pauseBtn.onclick = () => {
-      clearInterval(timer);
-      box.style.display = "none";
-      gameUI.style.display = "none";
-      homeScreen.style.display = "flex";
-      bgMusic.pause();
-      localStorage.setItem("lastScore", score);
-      lastScore.textContent = "Last Score: " + score;
-    };
-
-    homeScreen.style.display = "flex";
-  </script>
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-  <script>
-    function fireConfetti() {
-      confetti({
-        particleCount: 150,
-        spread: 100,
-        origin: { y: 0.6 },
-        colors: ['#00c9a7', '#ff4d4d', '#ffd700', '#764ba2']
-      });
-    }
-
-    function endGame() {
-      clearInterval(timer);
-      box.style.display = "none";
-      gameUI.style.display = "none";
-      endScreen.style.display = "flex";
-      finalScore.textContent = "Your Score: " + score;
-
-      if (score > bestScore) {
-        bestScore = score;
-        localStorage.setItem("bestScore", bestScore);
+    box.onclick = () => {
+      clearTimeout(reactionTimeout);
+      if (box.classList.contains("bonus")) {
+        score += 5;
         fireConfetti();
+      } else {
+        score++;
       }
+      scoreText.textContent = "Score: " + score;
+      randomPosition();
+      clickSound.currentTime = 0;
+      clickSound.play();
 
-      finalBest.textContent = "Best Score: " + bestScore;
-      localStorage.setItem("lastScore", score);
-      bgMusic.pause();
+      if (!isInfinite) {
+        reactionTimeout = setTimeout(endGame, 1500);
+      }
+    };
+
+    if (!isInfinite) {
+      reactionTimeout = setTimeout(endGame, 1500);
     }
-  </script>
+  }
+
+  startBtn.onclick = startGame;
+  restartBtn.onclick = startGame;
+
+  homeBtn.onclick = () => {
+    endScreen.style.display = "none";
+    homeScreen.style.display = "flex";
+    lastScoreValue = localStorage.getItem("lastScore") || 0;
+    lastScore.textContent = "Last Score: " + lastScoreValue;
+  };
+
+  pauseBtn.onclick = () => {
+    clearInterval(timer);
+    clearTimeout(reactionTimeout);
+    box.style.display = "none";
+    gameUI.style.display = "none";
+    homeScreen.style.display = "flex";
+    bgMusic.pause();
+    localStorage.setItem("lastScore", score);
+    lastScore.textContent = "Last Score: " + score;
+  };
+
+  homeScreen.style.display = "flex";
+</script>
 </body>
 </html>
