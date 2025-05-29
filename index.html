@@ -257,6 +257,7 @@
       box.onclick = () => {
         if (box.classList.contains("bonus")) {
           score += 5;
+          fireConfetti();
         } else {
           score++;
         }
