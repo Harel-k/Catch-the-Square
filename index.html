@@ -138,6 +138,20 @@
       from { opacity: 0; transform: translateY(20px); }
       to { opacity: 1; transform: translateY(0); }
     }
+  @keyframes shake {
+      0% { transform: translateX(-50%) translateY(0); }
+      25% { transform: translateX(-50%) translateY(-5px); }
+      50% { transform: translateX(-50%) translateY(5px); }
+      75% { transform: translateX(-50%) translateY(-5px); }
+      100% { transform: translateX(-50%) translateY(0); }
+    }
+  #boxTimer.flash {
+      animation: flash 1s infinite;
+    }
+    @keyframes flash {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
   </style>
 </head>
 <body>
@@ -155,7 +169,6 @@
   <p id="lastScore">Last Score: 0</p>
   <p id="bestScore">Best Score: 0</p>
 </div>
-
 <div id="gameUI">
   <div id="score">Score: 0</div>
   <div id="timer">Time: ∞</div>
@@ -164,7 +177,6 @@
     <div id="box"></div>
   </div>
 </div>
-
 <div id="endScreen">
   <h2>🏁 Game Over!</h2>
   <p id="finalScore">Your Score: 0</p>
@@ -172,160 +184,217 @@
   <button id="restartBtn">🔁 Play Again</button>
   <button id="homeBtn">🏠 Home</button>
 </div>
-
 <audio id="clickSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_aefb06e689.mp3?filename=mouse-click-153941.mp3"></audio>
 <audio id="bgMusic" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_4a56cd02c5.mp3?filename=happy-beat-111909.mp3" loop></audio>
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 <script>
-  const box = document.getElementById("box");
-  const startBtn = document.getElementById("startBtn");
-  const restartBtn = document.getElementById("restartBtn");
-  const homeBtn = document.getElementById("homeBtn");
-  const pauseBtn = document.getElementById("pauseBtn");
-  const scoreText = document.getElementById("score");
-  const timerText = document.getElementById("timer");
-  const gameArea = document.getElementById("gameArea");
-  const homeScreen = document.getElementById("homeScreen");
-  const gameUI = document.getElementById("gameUI");
-  const endScreen = document.getElementById("endScreen");
-  const finalScore = document.getElementById("finalScore");
-  const finalBest = document.getElementById("finalBest");
-  const lastScore = document.getElementById("lastScore");
-  const bestScoreDisplay = document.getElementById("bestScore");
-  const clickSound = document.getElementById("clickSound");
-  const bgMusic = document.getElementById("bgMusic");
-  const modeSelect = document.getElementById("modeSelect");
+const box = document.getElementById("box");
+const startBtn = document.getElementById("startBtn");
+const restartBtn = document.getElementById("restartBtn");
+const homeBtn = document.getElementById("homeBtn");
+const pauseBtn = document.getElementById("pauseBtn");
+const scoreText = document.getElementById("score");
+const timerText = document.getElementById("timer");
+const gameArea = document.getElementById("gameArea");
+const homeScreen = document.getElementById("homeScreen");
+const gameUI = document.getElementById("gameUI");
+const endScreen = document.getElementById("endScreen");
+const finalScore = document.getElementById("finalScore");
+const finalBest = document.getElementById("finalBest");
+const lastScore = document.getElementById("lastScore");
+const bestScoreDisplay = document.getElementById("bestScore");
+const clickSound = document.getElementById("clickSound");
+const bgMusic = document.getElementById("bgMusic");
+const modeSelect = document.getElementById("modeSelect");
 
-  let score = 0;
-  let bestScore = localStorage.getItem("bestScore") || 0;
-  let lastScoreValue = localStorage.getItem("lastScore") || 0;
-  let timer;
-  let reactionTimeout;
-  let isInfinite = false;
+let score = 0;
+let bestScore = localStorage.getItem("bestScore") || 0;
+let lastScoreValue = localStorage.getItem("lastScore") || 0;
+let timer;
+let reactionTimeout;
+let isInfinite = false;
 
-  lastScore.textContent = "Last Score: " + lastScoreValue;
-  bestScoreDisplay.textContent = "Best Score: " + bestScore;
+lastScore.textContent = "Last Score: " + lastScoreValue;
+bestScoreDisplay.textContent = "Best Score: " + bestScore;
 
-  function fireConfetti() {
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: ['#00c9a7', '#ff4d4d', '#ffd700', '#764ba2']
-    });
+function fireConfetti() {
+  confetti({
+    particleCount: 100,
+    spread: 70,
+    origin: { y: 0.6 },
+    colors: ['#00c9a7', '#ff4d4d', '#ffd700', '#764ba2']
+  });
+}
+
+function randomPosition() {
+  const areaWidth = gameArea.clientWidth;
+  const areaHeight = gameArea.clientHeight;
+  const boxSize = box.offsetWidth;
+  const topLimit = document.getElementById("score").offsetHeight + 20;
+
+  const x = Math.random() * (areaWidth - boxSize);
+  const y = Math.random() * (areaHeight - boxSize - topLimit) + topLimit;
+  box.style.left = x + "px";
+  box.style.top = y + "px";
+
+  if (Math.random() < 0.2) {
+    box.classList.add("bonus");
+  } else {
+    box.classList.remove("bonus");
+  }
+}
+
+function endGame() {
+  clearInterval(timer);
+  clearTimeout(reactionTimeout);
+  box.style.display = "none";
+  gameUI.style.display = "none";
+  endScreen.style.display = "flex";
+  finalScore.textContent = "Your Score: " + score;
+
+  if (score > bestScore) {
+    bestScore = score;
+    localStorage.setItem("bestScore", bestScore);
+    fireConfetti();
   }
 
-  function randomPosition() {
-    const areaWidth = gameArea.clientWidth;
-    const areaHeight = gameArea.clientHeight;
-    const x = Math.random() * (areaWidth - 60);
-    const y = Math.random() * (areaHeight - 60);
-    box.style.left = x + "px";
-    box.style.top = y + "px";
+  finalBest.textContent = "Best Score: " + bestScore;
+  localStorage.setItem("lastScore", score);
+  bgMusic.pause();
+}
 
-    if (Math.random() < 0.2) {
-      box.classList.add("bonus");
-    } else {
-      box.classList.remove("bonus");
-    }
+function startGame() {
+  let boxTimer = document.getElementById("boxTimer");
+  if (!boxTimer) {
+    boxTimer = document.createElement('div');
+    boxTimer.id = 'boxTimer';
+    boxTimer.style.position = 'absolute';
+    boxTimer.style.top = '-35px';
+    boxTimer.style.zIndex = '9999';
+    boxTimer.style.left = '50%';
+    boxTimer.style.transform = 'translateX(-50%)';
+    boxTimer.style.fontSize = '1.2rem';
+    boxTimer.style.padding = '4px 8px';
+    boxTimer.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+    boxTimer.style.borderRadius = '10px';
+    boxTimer.style.boxShadow = '0 0 5px rgba(255, 255, 255, 0.3)';
+    boxTimer.style.color = '#fff';
+    boxTimer.style.fontWeight = '500';
+    box.appendChild(boxTimer);
+    boxTimer.style.display = 'none';
+  boxTimer.textContent = '';
+  boxTimer.classList.remove('flash');
+        boxTimer.textContent = '';
   }
 
-  function endGame() {
-    clearInterval(timer);
+  score = 0;
+  let mode = modeSelect.value;
+  let timeLeft = 30;
+  isInfinite = false;
+
+  if (mode === "easy") timeLeft = 45;
+  else if (mode === "hard") timeLeft = 20;
+  else if (mode === "infinite") isInfinite = true;
+
+  scoreText.textContent = "Score: 0";
+  timerText.textContent = isInfinite ? "Time: ∞" : "Time: " + timeLeft;
+
+  homeScreen.style.display = "none";
+  endScreen.style.display = "none";
+  gameUI.style.display = "flex";
+  box.style.display = "block";
+  randomPosition();
+
+  bgMusic.currentTime = 0;
+  bgMusic.play();
+
+  clearInterval(timer);
+  clearTimeout(reactionTimeout);
+  if (!isInfinite) {
+    timer = setInterval(() => {
+      timeLeft--;
+      timerText.textContent = "Time: " + timeLeft;
+      if (timeLeft <= 0) endGame();
+    }, 1000);
+  }
+
+  box.onclick = () => {
     clearTimeout(reactionTimeout);
-    box.style.display = "none";
-    gameUI.style.display = "none";
-    endScreen.style.display = "flex";
-    finalScore.textContent = "Your Score: " + score;
+    if (box.countdownInterval) clearInterval(box.countdownInterval);
 
-    if (score > bestScore) {
-      bestScore = score;
-      localStorage.setItem("bestScore", bestScore);
+    if (box.classList.contains("bonus")) {
+      score += 5;
       fireConfetti();
+    } else {
+      score++;
     }
-
-    finalBest.textContent = "Best Score: " + bestScore;
-    localStorage.setItem("lastScore", score);
-    bgMusic.pause();
-  }
-
-  function startGame() {
-    score = 0;
-    let mode = modeSelect.value;
-    let timeLeft = 30;
-    isInfinite = false;
-
-    if (mode === "easy") timeLeft = 45;
-    else if (mode === "hard") timeLeft = 20;
-    else if (mode === "infinite") isInfinite = true;
-
-    scoreText.textContent = "Score: 0";
-    timerText.textContent = isInfinite ? "Time: ∞" : "Time: " + timeLeft;
-
-    homeScreen.style.display = "none";
-    endScreen.style.display = "none";
-    gameUI.style.display = "flex";
-    box.style.display = "block";
+    scoreText.textContent = "Score: " + score;
     randomPosition();
+    clickSound.currentTime = 0;
+    clickSound.play();
 
-    bgMusic.currentTime = 0;
-    bgMusic.play();
-
-    clearInterval(timer);
-    clearTimeout(reactionTimeout);
     if (!isInfinite) {
-      timer = setInterval(() => {
-        timeLeft--;
-        timerText.textContent = "Time: " + timeLeft;
-        if (timeLeft <= 0) endGame();
+      let secondsLeft = 3;
+      const boxTimer = document.getElementById("boxTimer");
+      boxTimer.style.display = "none";
+      boxTimer.textContent = "";
+      boxTimer.classList.remove("flash");
+
+      // delay reveal timer
+      setTimeout(() => {
+  if (secondsLeft <= 0 || boxTimer.style.display === "block") return;
+  boxTimer.style.display = "block";
+  boxTimer.textContent = secondsLeft + "s";
+  boxTimer.style.transform = "translateX(-50%) scale(1.2)";
+  boxTimer.style.transition = "transform 0.2s ease";
+  setTimeout(() => boxTimer.style.transform = "translateX(-50%) scale(1)", 100);
+}, 1000);
+
+      box.countdownInterval = setInterval(() => {
+        secondsLeft--;
+        if (secondsLeft <= 0) {
+          clearInterval(box.countdownInterval);
+          boxTimer.style.display = "none";
+          boxTimer.textContent = "";
+          boxTimer.classList.remove("flash");
+          boxTimer.style.animation = "shake 0.5s ease";
+        } else {
+          boxTimer.textContent = secondsLeft + "s";
+          if (secondsLeft === 1) boxTimer.classList.add("flash");
+        }
       }, 1000);
+
+      reactionTimeout = setTimeout(() => {
+        clearInterval(box.countdownInterval);
+        boxTimer.style.display = 'none';
+        endGame();
+      }, 3000);
     }
-
-    box.onclick = () => {
-      clearTimeout(reactionTimeout);
-      if (box.classList.contains("bonus")) {
-        score += 5;
-        fireConfetti();
-      } else {
-        score++;
-      }
-      scoreText.textContent = "Score: " + score;
-      randomPosition();
-      clickSound.currentTime = 0;
-      clickSound.play();
-
-      if (!isInfinite) {
-        reactionTimeout = setTimeout(endGame, 1500);
-      }
-    };
-
-    if (!isInfinite) {
-      reactionTimeout = setTimeout(endGame, 1500);
-    }
-  }
-
-  startBtn.onclick = startGame;
-  restartBtn.onclick = startGame;
-
-  homeBtn.onclick = () => {
-    endScreen.style.display = "none";
-    homeScreen.style.display = "flex";
-    lastScoreValue = localStorage.getItem("lastScore") || 0;
-    lastScore.textContent = "Last Score: " + lastScoreValue;
   };
+}
 
-  pauseBtn.onclick = () => {
-    clearInterval(timer);
-    clearTimeout(reactionTimeout);
-    box.style.display = "none";
-    gameUI.style.display = "none";
-    homeScreen.style.display = "flex";
-    bgMusic.pause();
-    localStorage.setItem("lastScore", score);
-    lastScore.textContent = "Last Score: " + score;
-  };
+startBtn.onclick = startGame;
+restartBtn.onclick = startGame;
 
+homeBtn.onclick = () => {
+  endScreen.style.display = "none";
   homeScreen.style.display = "flex";
+  lastScoreValue = localStorage.getItem("lastScore") || 0;
+  lastScore.textContent = "Last Score: " + lastScoreValue;
+};
+
+pauseBtn.onclick = () => {
+  clearInterval(timer);
+  clearTimeout(reactionTimeout);
+  box.style.display = "none";
+  gameUI.style.display = "none";
+  homeScreen.style.display = "flex";
+  bgMusic.pause();
+  localStorage.setItem("lastScore", score);
+  lastScore.textContent = "Last Score: " + score;
+};
+
+homeScreen.style.display = "flex";
 </script>
 </body>
 </html>
